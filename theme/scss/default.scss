@@ -2,19 +2,21 @@
 @import "compass/css3/columns";
 @import "compass/css3/user-interface";
 
-$social-tags: '#yourhashtag';
-$brand-small-icon-size: 30px;
+$social-tags: 'Zenexity';
+$brand-small-icon-size: 45px;
 
-$gray-1: #e6e6e6;
+//$gray-1: #e6e6e6;
+$gray-1: #f5f4ed;
 $gray-2: #a9a9a9;
 $gray-3: #797979;
-$gray-4: #515151;
+//$gray-4: #515151;
+$gray-4: #3b3b3e;
 
 $brand-blue: rgb(67, 135, 253);
 $brand-blue-secondary: #3c8ef3;
 $brand-blue-secondary2: #2a7cdf;
 
-$brand-red: rgb(244, 74, 63);
+$brand-red: #f84f46;
 $brand-red-secondary: #e0543e;
 $brand-red-secondary2: #d94d3a;
 
@@ -31,7 +33,7 @@ $slide-height: 700px;
 $slide-width-widescreen: 1100px;
 $slide-top-bottom-padding: 40px;
 $slide-left-right-padding: 60px;
-$slide-border-radius: 5px;
+$slide-border-radius: 3px;
 
 $slide-tap-area-width: 100px;
 
@@ -174,11 +176,11 @@ slides > slide {
       position: absolute;
       bottom: $slide-top-bottom-padding / 2;
       left: $slide-left-right-padding;
-      background: url(../../images/google_developers_icon_128.png) no-repeat 0 50%;
+      background: url(../../images/logo-zen.png) no-repeat 0 50%;
       @include background-size($brand-small-icon-size $brand-small-icon-size);
       padding-left: $brand-small-icon-size + 10;
       height: $brand-small-icon-size;
-      line-height: 1.9;
+      line-height: $brand-small-icon-size;
     }
     &:after {
       font-size: 12pt;
@@ -193,7 +195,7 @@ slides > slide {
   &.title-slide {
     &:after {
       content: '';
-      background: url(../../images/io2012_logo.png) no-repeat 100% 50%;
+      //background: url(../../images/io2012_logo.png) no-repeat 100% 50%;
       @include background-size(contain);
       position: absolute;
       bottom: $slide-top-bottom-padding;
@@ -837,8 +839,8 @@ article.smaller {
 /* ===== SLIDE CONTENT ===== */
 .logoslide {
   img {
-    width: 383px;
-    height: 92px;
+    width: 393px;
+    height: 196px;
   }
 }
 
@@ -860,7 +862,7 @@ article.smaller {
 }
 
 .thank-you-slide {
-  background: $brand-blue !important;
+  background: $brand-red !important;
   color: white;
 
   h2 {
