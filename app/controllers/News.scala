@@ -55,25 +55,36 @@ object Bindables {
 object News extends Controller{
   import Bindables._
 
-
   def index(by: Int = 3) = {
     searchReverse(new Date, by, true)
   }
 
+  object Order extends Enumeration {
+    type Order = Value
+    val ASC, DESC = Value
+  }
+
+  // Build query
+  private def q(o: Order.Order)(date: Iso8601Date, by: Int, include: Boolean): Future[List[Post]] = {
+    val pred = o match {
+      case Order.ASC => if(include) "$gte" else "$gt"
+      case Order.DESC => if(include) "$lte" else "$lt"
+    }
+
+    val query = QueryBuilder(Some(BSONDocument(
+      "creationDate" -> BSONDocument(pred -> BSONDateTime(date.getTime)))),
+      Some(BSONDocument("creationDate" -> BSONInteger(1))))
+
+    val cursor = Post.collection.find[Option[Post]](query)
+    cursor.toList(by + 1).map(_.flatten)
+  }
+  private def qAsc = q(Order.ASC) _
+  private def qDesc = q(Order.DESC) _
+
+
   def searchForward(since: Iso8601Date, by: Int = 3, include: Boolean = true) =
       Action {
-        val query = QueryBuilder(Some(BSONDocument(
-          "creationDate" -> BSONDocument(
-            if(include) "$gte" -> BSONDateTime(since.getTime)
-            else "$gt" -> BSONDateTime(since.getTime)
-          )
-        )),
-        Some(BSONDocument("creationDate" -> BSONInteger(1)))
-        )
-
-        val cursor = Post.collection.find[Option[Post]](query)
-
-        val postList: Future[List[Post]] = cursor.toList(by + 1).map(_.flatten)
+        val postList = qAsc(since, by, include)
 
         AsyncResult{
           postList.map{postList =>
@@ -117,18 +128,7 @@ object News extends Controller{
 
   def searchReverse(upTo: Iso8601Date, by: Int = 3, include: Boolean = true) =
       Action {
-        val query = QueryBuilder(Some(BSONDocument(
-          "creationDate" -> BSONDocument(
-            if(include) "$lte" -> BSONDateTime(upTo.getTime)
-            else "$lt" -> BSONDateTime(upTo.getTime)
-          )
-        )),
-        Some(BSONDocument("creationDate" -> BSONInteger(-1)))
-        )
-
-        val cursor = Post.collection.find[Option[Post]](query)
-
-        val postList: Future[List[Post]] = cursor.toList(by + 1).map(_.flatten)
+        val postList = qDesc(upTo, by, include)
 
         AsyncResult{
           postList.map{postList =>
