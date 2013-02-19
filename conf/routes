@@ -14,8 +14,6 @@ GET     /news                       controllers.News.index(by: Int ?= 3)
 GET     /news/searchOlder           controllers.News.searchReverse(upTo: String, by: Int ?= 3, include: Boolean ?= true)
 GET     /news/searchNewer           controllers.News.searchForward(since: String, by: Int ?= 3, include: Boolean ?= true)
 
-GET     /products                   controllers.Products.index
-GET     /products/search            controllers.Products.search
 
 
 # Map static resources from the /public folder to the /assets URL path
