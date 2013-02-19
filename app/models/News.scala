@@ -19,6 +19,7 @@ import play.api.libs.json.JsObject
 
 import play.api.Play.current
 import play.modules.reactivemongo.ReactiveMongoPlugin
+import org.joda.time.format.ISODateTimeFormat
 
 import java.util.Date
 
@@ -65,11 +66,14 @@ object Post {
       maybePost.map(JsSuccess(_)).getOrElse(JsError("Does not look like a valid Post json object"))
     }
 
+    val fmt = ISODateTimeFormat.dateTime();
+
+
     def writes(n: Post) = JsObject(Seq(
       "id" -> n.id.map(x => JsString(x.stringify)).getOrElse(JsNull),
       "title" -> JsString(n.title),
       "body"  -> JsString(n.body),
-      "date"  -> JsString(n.creationDate.toString())
+      "date"  -> JsString(fmt.print(n.creationDate.getTime))
     ))
   }
 
