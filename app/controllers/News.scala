@@ -14,6 +14,7 @@ import play.api.libs.json.JsString
 
 import scala.util.control.Exception.catching
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 import reactivemongo.api.QueryBuilder
 import reactivemongo.bson.handlers.DefaultBSONHandlers.DefaultBSONReaderHandler
@@ -47,33 +48,50 @@ object News extends Controller{
 
         val cursor = Post.collection.find[Option[Post]](query)
 
-        val postList = cursor.toList(by + 1).map(_.flatten)
+        val postList: Future[List[Post]] = cursor.toList(by + 1).map(_.flatten)
 
         AsyncResult{
           postList.map{postList =>
             val lastPost = postList.lift(by)
             val realList = if (postList.length >= by) postList.take(by) else postList
 
-            val pager = JsObject(
-              postList.headOption.map{ first =>
-                "previous" -> JsString(
-                  routes.News.searchReverse(
-                    fmt.print(first.creationDate.getTime), by, false).url)
-              }.toSeq ++
-              lastPost.map{ post =>
-                // Ok, we do have one more in list
-                "next" -> JsString(
-                  routes.News.searchForward(
-                    fmt.print(post.creationDate.getTime), by, true).url)
-              }.toSeq
-            )
+            if (realList.length == by) {
+              // Okay, we got enough
+              val pager = JsObject(
+                postList.headOption.map{ first =>
+                  "previous" -> JsString(
+                    routes.News.searchReverse(
+                      fmt.print(first.creationDate.getTime), by, false).url)
+                }.toSeq ++
+                lastPost.map{ post =>
+                  // Ok, we do have one more in list
+                  "next" -> JsString(
+                    routes.News.searchForward(
+                      fmt.print(post.creationDate.getTime), by, true).url)
+                }.toSeq
+              )
 
-            Ok(
-              JsObject(Seq(
-                "pager" -> pager,
-                "elements" -> JsArray(realList.map(_.toJson))
-              ))
-            )
+              Ok(
+                JsObject(Seq(
+                  "pager" -> pager,
+                  "elements" -> JsArray(realList.map(_.toJson))
+                ))
+              )
+            } else {
+              // Too bad :( we didn't had enough :(
+              // Need to redirect user
+              val maybeLastPost = realList.lastOption
+
+              maybeLastPost.map{ lastPost =>
+                TemporaryRedirect(
+                  routes.News.searchReverse(
+                    fmt.print(lastPost.creationDate.getTime), by, true).url)
+              }.getOrElse {
+                TemporaryRedirect(
+                  routes.News.searchReverse(
+                    fmt.print(sinceDate.getTime), by, true).url)
+              }
+            }
           }
 
         }
@@ -94,7 +112,7 @@ object News extends Controller{
 
         val cursor = Post.collection.find[Option[Post]](query)
 
-        val postList = cursor.toList(by + 1).map(_.flatten)
+        val postList: Future[List[Post]] = cursor.toList(by + 1).map(_.flatten)
 
         AsyncResult{
           postList.map{postList =>
