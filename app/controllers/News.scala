@@ -4,6 +4,7 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import play.api.mvc.EssentialAction
 import play.api.mvc.AsyncResult
+import play.api.mvc.QueryStringBindable
 
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Done
@@ -27,20 +28,44 @@ import org.joda.time.format.ISODateTimeFormat
 
 import models.Post
 
+object Bindables {
+  import java.net.URLEncoder
+
+  type Iso8601Date = Date
+
+  implicit def bindableIso8601 = new QueryStringBindable[Iso8601Date] {
+    val fmt = ISODateTimeFormat.dateTime();
+
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Iso8601Date]] = {
+      val parseDate = (ds: String) =>
+        catching(classOf[IllegalArgumentException], classOf[UnsupportedOperationException])
+          .either(fmt.parseDateTime(ds))
+          .right.map(_.toDate)
+          .left.map(_ => "Date doesn't look like iso8601")
+
+      params.get(key)
+        .flatMap(_.headOption)
+        .map(parseDate)
+    }
+
+    override def unbind(key: String, value: Iso8601Date) = key + "=" + (URLEncoder.encode(fmt.print(value.getTime), "utf-8"))
+  }
+}
+
 object News extends Controller{
-  val fmt = ISODateTimeFormat.dateTime();
+  import Bindables._
+
 
   def index(by: Int = 3) = {
-    searchReverse(fmt.print((new Date()).getTime), by, true)
+    searchReverse(new Date, by, true)
   }
 
-  def searchForward(since: String, by: Int = 3, include: Boolean = true) =
-    stringToDate(since) { sinceDate => 
+  def searchForward(since: Iso8601Date, by: Int = 3, include: Boolean = true) =
       Action {
         val query = QueryBuilder(Some(BSONDocument(
           "creationDate" -> BSONDocument(
-            if(include) "$gte" -> BSONDateTime(sinceDate.getTime)
-            else "$gt" -> BSONDateTime(sinceDate.getTime)
+            if(include) "$gte" -> BSONDateTime(since.getTime)
+            else "$gt" -> BSONDateTime(since.getTime)
           )
         )),
         Some(BSONDocument("creationDate" -> BSONInteger(1)))
@@ -59,15 +84,11 @@ object News extends Controller{
               // Okay, we got enough
               val pager = JsObject(
                 postList.headOption.map{ first =>
-                  "previous" -> JsString(
-                    routes.News.searchReverse(
-                      fmt.print(first.creationDate.getTime), by, false).url)
+                  "previous" -> JsString(routes.News.searchReverse(first.creationDate, by, false).url)
                 }.toSeq ++
                 lastPost.map{ post =>
                   // Ok, we do have one more in list
-                  "next" -> JsString(
-                    routes.News.searchForward(
-                      fmt.print(post.creationDate.getTime), by, true).url)
+                  "next" -> JsString(routes.News.searchForward(post.creationDate, by, true).url)
                 }.toSeq
               )
 
@@ -83,28 +104,23 @@ object News extends Controller{
               val maybeLastPost = realList.lastOption
 
               maybeLastPost.map{ lastPost =>
-                TemporaryRedirect(
-                  routes.News.searchReverse(
-                    fmt.print(lastPost.creationDate.getTime), by, true).url)
+                TemporaryRedirect(routes.News.searchReverse(lastPost.creationDate, by, true).url)
               }.getOrElse {
                 TemporaryRedirect(
-                  routes.News.searchReverse(
-                    fmt.print(sinceDate.getTime), by, true).url)
+                  routes.News.searchReverse(since, by, true).url)
               }
             }
           }
 
         }
-      }
     }
 
-  def searchReverse(upTo: String, by: Int = 3, include: Boolean = true) =
-    stringToDate(upTo) { upToDate =>
+  def searchReverse(upTo: Iso8601Date, by: Int = 3, include: Boolean = true) =
       Action {
         val query = QueryBuilder(Some(BSONDocument(
           "creationDate" -> BSONDocument(
-            if(include) "$lte" -> BSONDateTime(upToDate.getTime)
-            else "$lt" -> BSONDateTime(upToDate.getTime)
+            if(include) "$lte" -> BSONDateTime(upTo.getTime)
+            else "$lt" -> BSONDateTime(upTo.getTime)
           )
         )),
         Some(BSONDocument("creationDate" -> BSONInteger(-1)))
@@ -121,15 +137,11 @@ object News extends Controller{
 
             val pager = JsObject(
               firstPost.map{ first =>
-                "previous" -> JsString(
-                  routes.News.searchReverse(
-                    fmt.print(first.creationDate.getTime), by, true).url)
+                "previous" -> JsString(routes.News.searchReverse(first.creationDate, by, true).url)
               }.toSeq ++
               postList.headOption.map{ post =>
                 // Ok, we do have one more in list
-                "next" -> JsString(
-                  routes.News.searchForward(
-                    fmt.print(post.creationDate.getTime), by, false).url)
+                "next" -> JsString(routes.News.searchForward(post.creationDate, by, false).url)
               }.toSeq
             )
 
@@ -142,22 +154,7 @@ object News extends Controller{
           }
 
         }
-      }
     }
 
-
-
-
-  def stringToDate(dateString: String)(f: Date => EssentialAction) = EssentialAction{ request => {
-      val fmt = ISODateTimeFormat.dateTime();
-      val maybeDate = catching(classOf[IllegalArgumentException], classOf[UnsupportedOperationException]).opt(fmt.parseDateTime(dateString))
-
-      maybeDate.map{ datetime =>
-        f(datetime.toDate)(request)
-      }.getOrElse{
-        Done(BadRequest("Date doesn't look like iso8601"))
-      }
-    }
-  }
 }
 
