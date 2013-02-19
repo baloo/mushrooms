@@ -11,8 +11,8 @@ POST    /old                        controllers.Old.create
 
 # Newer
 GET     /news                       controllers.News.index(by: Int ?= 3)
-GET     /news/searchOlder           controllers.News.searchReverse(upTo: String, by: Int ?= 3, include: Boolean ?= true)
-GET     /news/searchNewer           controllers.News.searchForward(since: String, by: Int ?= 3, include: Boolean ?= true)
+GET     /news/searchOlder           controllers.News.searchReverse(upTo: Iso8601Date, by: Int ?= 3, include: Boolean ?= true)
+GET     /news/searchNewer           controllers.News.searchForward(since: Iso8601Date, by: Int ?= 3, include: Boolean ?= true)
 
 
 
