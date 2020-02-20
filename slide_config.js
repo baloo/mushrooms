@@ -23,7 +23,7 @@ var SLIDE_CONFIG = {
     //gplus: 'http://plus.google.com/1234567890',
     twitter: '@baloose',
     www: 'http://www.zenexity.com',
-    github: 'http://github.com/baloose'
+    github: 'http://github.com/baloo'
   }/*, {
     name: 'Second Name',
     company: 'Job Title, Google',
